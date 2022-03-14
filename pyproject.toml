@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "Object recognition - TTIC 31040 Final Project UChicago"
+version = "0.1.0"
+description = ""
+authors = ["sbarrios93 <sbarrios93@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.9 <=3.10"
+opencv-python = "^4.5.5"
+matplotlib = "^3.5.1"
+mypy = "^0.941"
+
+[tool.poetry.dev-dependencies]
+ipykernel = "^6.9.1"
+pylama = "^8.3.8"
+black = "^22.1.0"
+pytest = "^7.1.0"
+mypy = "^0.941"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
