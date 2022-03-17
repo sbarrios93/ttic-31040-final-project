@@ -37,12 +37,12 @@ def test_check_and_sort_image_as_reference(valid_image, reference=True):
 def test_correct_variable_setting_reference_image(valid_image):
     image, detector = valid_image
     detector._check_and_sort_image(image=image, is_reference=True)
-    assert isinstance(detector.reference_image, np.ndarray)
+    assert isinstance(detector._reference_image, np.ndarray)
 
     if isinstance(image, np.ndarray):
-        assert detector.reference_image_path is None
+        assert detector._reference_image_path is None
     else:
-        assert detector.reference_image_path is not None
+        assert detector._reference_image_path is not None
 
 
 @pytest.mark.parametrize("valid_image", IMGS_FOR_TEST, ids=IMGS_IDS_FOR_TEST, indirect=True)
@@ -50,12 +50,12 @@ def test_check_and_sort_image_as_lookup(valid_image):
     image, detector = valid_image
 
     detector._check_and_sort_image(image=image, is_reference=False)
-    assert isinstance(detector.lookup_image, np.ndarray)
+    assert isinstance(detector._lookup_image, np.ndarray)
 
     if isinstance(image, np.ndarray):
-        assert detector.lookup_image_path is None
+        assert detector._lookup_image_path is None
     else:
-        assert detector.lookup_image_path is not None
+        assert detector._lookup_image_path is not None
 
 
 @pytest.fixture
@@ -68,34 +68,34 @@ def fitted_detector(request):
 
 @pytest.mark.parametrize("fitted_detector", IMGS_FOR_TEST, ids=IMGS_IDS_FOR_TEST, indirect=True)
 def test_keypoints_exist_in_reference(fitted_detector):
-    assert fitted_detector.reference_keypoints is not None
-    assert len(fitted_detector.reference_keypoints) > 0
+    assert fitted_detector._reference_keypoints is not None
+    assert len(fitted_detector._reference_keypoints) > 0
 
 
 @pytest.mark.parametrize("fitted_detector", IMGS_FOR_TEST, ids=IMGS_IDS_FOR_TEST, indirect=True)
 def test_keypoints_are_Keypoints_class_in_reference(fitted_detector):
-    assert all(isinstance(kp, cv2.KeyPoint) for kp in fitted_detector.reference_keypoints)
+    assert all(isinstance(kp, cv2.KeyPoint) for kp in fitted_detector._reference_keypoints)
 
 
 @pytest.mark.parametrize("fitted_detector", IMGS_FOR_TEST, ids=IMGS_IDS_FOR_TEST, indirect=True)
 def test_descriptors_exist_in_reference(fitted_detector):
-    assert isinstance(fitted_detector.reference_descriptors, np.ndarray)
+    assert isinstance(fitted_detector._reference_descriptors, np.ndarray)
 
 
 @pytest.mark.parametrize("fitted_detector", IMGS_FOR_TEST, ids=IMGS_IDS_FOR_TEST, indirect=True)
 def test_keypoints_exist_in_lookup(fitted_detector):
-    fitted_detector.predict(lookup_image=fitted_detector.reference_image)
-    assert fitted_detector.lookup_keypoints is not None
-    assert len(fitted_detector.lookup_keypoints) > 0
+    fitted_detector.predict(lookup_image=fitted_detector._reference_image)
+    assert fitted_detector._lookup_keypoints is not None
+    assert len(fitted_detector._lookup_keypoints) > 0
 
 
 @pytest.mark.parametrize("fitted_detector", IMGS_FOR_TEST, ids=IMGS_IDS_FOR_TEST, indirect=True)
 def test_keypoints_are_Keypoints_class_in_lookup(fitted_detector):
-    fitted_detector.predict(lookup_image=fitted_detector.reference_image)
-    assert all(isinstance(kp, cv2.KeyPoint) for kp in fitted_detector.lookup_keypoints)  # type: ignore
+    fitted_detector.predict(lookup_image=fitted_detector._reference_image)
+    assert all(isinstance(kp, cv2.KeyPoint) for kp in fitted_detector._lookup_keypoints)  # type: ignore
 
 
 @pytest.mark.parametrize("fitted_detector", IMGS_FOR_TEST, ids=IMGS_IDS_FOR_TEST, indirect=True)
 def test_descriptors_exist_in_lookup(fitted_detector):
-    fitted_detector.predict(lookup_image=fitted_detector.reference_image)
-    assert isinstance(fitted_detector.lookup_descriptors, np.ndarray)
+    fitted_detector.predict(lookup_image=fitted_detector._reference_image)
+    assert isinstance(fitted_detector._lookup_descriptors, np.ndarray)
