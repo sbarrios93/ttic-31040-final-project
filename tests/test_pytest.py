@@ -50,12 +50,12 @@ def test_check_and_sort_image_as_lookup(valid_image):
     image, detector = valid_image
 
     detector._check_and_sort_image(image=image, is_reference=False)
-    assert isinstance(detector._lookup_image, np.ndarray)
+    assert isinstance(detector.lookup_image, np.ndarray)
 
     if isinstance(image, np.ndarray):
-        assert detector._lookup_image_path is None
+        assert detector.lookup_image_path is None
     else:
-        assert detector._lookup_image_path is not None
+        assert detector.lookup_image_path is not None
 
 
 @pytest.fixture

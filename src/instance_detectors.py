@@ -1,5 +1,4 @@
 import os
-import pathlib
 import typing
 from pathlib import Path
 
@@ -30,8 +29,8 @@ class Detector:
         self._reference_width: int
         self._reference_corners: np.ndarray[typing.Any, np.dtype[np.float64]]
 
-        self._lookup_image: np.ndarray[typing.Any, np.dtype[np.float64]]
-        self._lookup_image_path: AllowedPathType
+        self.lookup_image: np.ndarray[typing.Any, np.dtype[np.float64]]
+        self.lookup_image_path: AllowedPathType
 
         # set when running self.fit
         self._reference_keypoints: typing.Iterable[cv2.KeyPoint]
@@ -43,7 +42,7 @@ class Detector:
         self._match_params: MatchParams
 
         # set when running _match_keypoints (by running parent function self.predict)
-        self._unfiltered_matches: typing.Iterable[typing.Iterable[cv2.DMatch]]
+        self._unfiltered_matches: MatchedKeypoints
 
         # set when running _filter_keypoints (by running parent function self.predict)
         self._matched_keypoints: MatchedKeypoints
@@ -70,16 +69,10 @@ class Detector:
 
     def _check_and_sort_image(
         self,
-        image: typing.Union[AllowedPathType, np.ndarray[typing.Any, np.dtype[np.float64]]],
+        image: typing.Any,
         is_reference: bool = False,
         cv_color_profile: int = cv2.COLOR_BGR2RGB,
     ) -> bool:
-        """
-        Checks if the image is of the right type
-        and returns True if it is.
-
-        self._reference_image and self._reference_image_path are set accordingly.
-        """
 
         # check if image is None, if so throw error
         if image is None:
@@ -93,15 +86,19 @@ class Detector:
                 self._reference_image_path = None
                 self._reference_image = image
             else:
-                self._lookup_image_path = None
-                self._lookup_image = image
+                self.lookup_image_path = None
+                self.lookup_image = image
         elif isinstance(image, (str, os.PathLike)):
             if is_reference:
                 self._reference_image_path = Path(image)
-                self._reference_image = cv2.cvtColor(cv2.imread(str(self._reference_image_path)), cv_color_profile)
+                self._reference_image = cv2.cvtColor(
+                    cv2.imread(str(self._reference_image_path)), cv_color_profile
+                )
             else:
-                self._lookup_image_path = Path(image)
-                self._lookup_image = cv2.cvtColor(cv2.imread(str(self._lookup_image_path)), cv_color_profile)
+                self.lookup_image_path = Path(image)
+                self.lookup_image = cv2.cvtColor(
+                    cv2.imread(str(self.lookup_image_path)), cv_color_profile
+                )
         else:
             raise TypeError(
                 f"Please input a {['reference image' if is_reference else 'image'][0]} image of any of types <str, os.PathLike, pathlib.Path, np.ndarray>, got {type(image)}"
@@ -119,10 +116,15 @@ class Detector:
         cv_color_profile=cv2.COLOR_BGR2RGB,
     ):
         # sort out the reference image depending on the type loaded
-        self._check_and_sort_image(reference_image, is_reference=True, cv_color_profile=cv_color_profile)
+        self._check_and_sort_image(
+            reference_image, is_reference=True, cv_color_profile=cv_color_profile
+        )
 
         # init keypoints, descriptors
-        self._reference_keypoints, self._reference_descriptors = self.sift.detectAndCompute(self._reference_image, None)
+        (
+            self._reference_keypoints,
+            self._reference_descriptors,
+        ) = self.sift.detectAndCompute(self._reference_image, None)
 
         # set fit ran to true after doing all steps in the function
         self._fit_ran = True
@@ -149,7 +151,9 @@ class Detector:
     def _match_keypoints(self) -> MatchedKeypoints:
 
         matches = cv2.BFMatcher().knnMatch(
-            self._lookup_descriptors, self._reference_descriptors, k=self._match_params.k_param
+            self._lookup_descriptors,
+            self._reference_descriptors,
+            k=self._match_params.k_param,
         )
         return matches
 
@@ -164,8 +168,12 @@ class Detector:
                 filtered_matches.append(m[0])
 
         matched_keypoints = MatchedKeypoints(
-            reference_keypoints=[self._reference_keypoints[m.trainIdx] for m in filtered_matches],
-            lookup_keypoints=[self._lookup_keypoints[m.queryIdx] for m in filtered_matches],
+            reference_keypoints=[
+                self._reference_keypoints[m.trainIdx] for m in filtered_matches
+            ],
+            lookup_keypoints=[
+                self._lookup_keypoints[m.queryIdx] for m in filtered_matches
+            ],
         )
 
         return matched_keypoints
@@ -185,21 +193,30 @@ class Detector:
         )
 
         stacked_keypoints = np.hstack(
-            [np.array(reference_keypoints).reshape(-1, 1), np.array(lookup_keypoints).reshape(-1, 1)]
+            [
+                np.array(reference_keypoints).reshape(-1, 1),
+                np.array(lookup_keypoints).reshape(-1, 1),
+            ]
         )  # shape (N,2)
 
         # transform all keypoints
         # transform_keypoints_affine returns (keypoint, rotation_matrix, scale) for each keypoint. we index the lambda return to [0] so we only get the keypoints
         warped_keypoints = np.apply_along_axis(
-            lambda x: Transformations().transform_keypoints_affine(*x)[0], 1, stacked_keypoints
+            lambda x: Transformations().transform_keypoints_affine(*x)[0],
+            1,
+            stacked_keypoints,
         )
         # [1] returns the rotation matrices
         rotation_matrices = np.apply_along_axis(
-            lambda x: Transformations().transform_keypoints_affine(*x)[1], 1, stacked_keypoints
+            lambda x: Transformations().transform_keypoints_affine(*x)[1],
+            1,
+            stacked_keypoints,
         )
         # [2] returns the scales
         scales = np.apply_along_axis(
-            lambda x: Transformations().transform_keypoints_affine(*x)[2], 1, stacked_keypoints
+            lambda x: Transformations().transform_keypoints_affine(*x)[2],
+            1,
+            stacked_keypoints,
         )
 
         return warped_keypoints, rotation_matrices, scales
@@ -216,7 +233,9 @@ class Detector:
         )
 
         # get voting stats
-        _, votes_indices, votes_counts = np.unique(votes, axis=0, return_counts=True, return_inverse=True)
+        _, votes_indices, votes_counts = np.unique(
+            votes, axis=0, return_counts=True, return_inverse=True
+        )
 
         # get indices of the vote that won
         winning_keypoints = np.where(votes_indices == votes_counts.argmax())
@@ -234,32 +253,48 @@ class Detector:
     def _find_homography(self):
         # find homography using ransac and cv2
 
-        reference_points = np.asarray([kp.pt for kp in self._hough_filtered_reference_keypoints]).reshape(-1, 1, 2)
-        lookup_points = np.asarray([kp.pt for kp in self._hough_filtered_lookup_keypoints]).reshape(-1, 1, 2)
+        reference_points = np.asarray(
+            [kp.pt for kp in self._hough_filtered_reference_keypoints]
+        ).reshape(-1, 1, 2)
+        lookup_points = np.asarray(
+            [kp.pt for kp in self._hough_filtered_lookup_keypoints]
+        ).reshape(-1, 1, 2)
         _homography, mask = cv2.findHomography(
-            reference_points, lookup_points, cv2.RANSAC, self._match_params.ransac_threshold
+            reference_points,
+            lookup_points,
+            cv2.RANSAC,
+            self._match_params.ransac_threshold,
         )  # get the mask we need to filter out the bad matches, will do another homography with the good values of the mask
 
         # with indices where mask == 1, do homography again, this time with the good matches
         selected_idx = np.where(mask == 1)[0]
         H, _ = cv2.findHomography(
-            reference_points[selected_idx], lookup_points[selected_idx], cv2.RANSAC, self._match_params.ransac_threshold
+            reference_points[selected_idx],
+            lookup_points[selected_idx],
+            cv2.RANSAC,
+            self._match_params.ransac_threshold,
         )
 
         return H
 
-    def predict(self, lookup_image, cv_color_profile=cv2.COLOR_BGR2RGB, **kwargs) -> np.ndarray:
+    def predict(
+        self, lookup_image, cv_color_profile=cv2.COLOR_BGR2RGB, **kwargs
+    ) -> np.ndarray:
         assert self._fit_ran, "Please call fit before calling predict"
 
         # register parameters as namedtuple on self.match_params
         self._register_params(**kwargs)
 
         # sort out the image depending on the type loaded
-        self._check_and_sort_image(lookup_image, is_reference=False, cv_color_profile=cv_color_profile)
+        self._check_and_sort_image(
+            lookup_image, is_reference=False, cv_color_profile=cv_color_profile
+        )
 
         # MATCHIN PIPELINE START MARKER
         # extract keypoints, descriptos from lookup_image
-        self._lookup_keypoints, self._lookup_descriptors = self.sift.detectAndCompute(self._lookup_image, None)
+        self._lookup_keypoints, self._lookup_descriptors = self.sift.detectAndCompute(
+            self.lookup_image, None
+        )
 
         self._unfiltered_matches = self._match_keypoints()
         self._matched_keypoints = self._filter_keypoints()  # type: ignore
@@ -271,7 +306,10 @@ class Detector:
         ) = self._warp_keypoints()
 
         (
-            (self._hough_filtered_reference_keypoints, self._hough_filtered_lookup_keypoints),
+            (
+                self._hough_filtered_reference_keypoints,
+                self._hough_filtered_lookup_keypoints,
+            ),
             self._hough_winning_keypoints_indices,
         ) = self._hough_voting()
 
