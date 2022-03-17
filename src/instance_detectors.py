@@ -279,7 +279,7 @@ class Detector:
 
     def predict(
         self, lookup_image, cv_color_profile=cv2.COLOR_BGR2RGB, **kwargs
-    ) -> np.ndarray:
+    ) -> typing.Tuple[np.ndarray, np.ndarray]:
         assert self._fit_ran, "Please call fit before calling predict"
 
         # register parameters as namedtuple on self.match_params
@@ -316,8 +316,8 @@ class Detector:
         self.H = self._find_homography()  # transformation Homography
 
         # get bounding box for lookup image by perspective transform
-        self._lookup_bounding_box = cv2.perspectiveTransform(
+        self._lookup_bounding_box: np.ndarray = cv2.perspectiveTransform(
             self._reference_corners.reshape(-1, 1, 2).astype(float), self.H
         ).reshape(4, 2)
 
-        return self._lookup_bounding_box
+        return self._reference_corners, self._lookup_bounding_box

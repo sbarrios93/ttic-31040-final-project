@@ -4,6 +4,7 @@ from pathlib import Path
 import typing
 import rich_click as click
 from src.custom_dataclasses import MatchParams
+from rich import print
 
 # load rich_click arguments
 click.rich_click.OPTION_GROUPS = {
@@ -60,6 +61,14 @@ click.rich_click.USE_RICH_MARKUP = True
     is_flag=True,
     default=False,
     help="Do not display result on external window",
+)
+@click.option(
+    "print_bboxes",
+    "--print",
+    "-e",  # for echo
+    is_flag=True,
+    default=False,
+    help="print the bboxes",
 )
 @click.option(
     "save_result",
@@ -134,6 +143,7 @@ def run_pipeline(
     distance_threshold: typing.Union[float, int],
     hough_bins: int,
     ransac_threshold: float,
+    print_bboxes: bool,
 ):
     """
     Arguments:\n
@@ -158,9 +168,11 @@ def run_pipeline(
     detector = Detector()
     detector.fit(path_to_reference_image)
 
+    all_bboxes: list = []
+
     with click.progressbar(queue, label="Processing") as progress_bar:
         for path in progress_bar:
-            _process_lookup_image(
+            reference_bbox, lookup_bbox = _process_lookup_image(
                 dont_display_result,
                 save_result,
                 save_path,
@@ -172,7 +184,13 @@ def run_pipeline(
                 detector,
                 path,
             )
-    return True
+
+            if print_bboxes:
+                print(
+                    f"\n[u]{path}:[/]\n [b]-> Reference:[/]\n {reference_bbox}\n [b]-> Lookup:[/]\n {lookup_bbox}"
+                )
+            all_bboxes.append((reference_bbox, lookup_bbox))
+    return all_bboxes
 
 
 if __name__ == "__main__":

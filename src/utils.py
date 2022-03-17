@@ -138,7 +138,7 @@ def _process_lookup_image(
     detector,
     path,
 ):
-    bbox = detector.predict(
+    reference_bbox, lookup_bbox = detector.predict(
         path,
         k_param=k_param,
         distance_threshold=distance_threshold,
@@ -157,7 +157,7 @@ def _process_lookup_image(
         fig_dir = None
         fig_name_w_extension = None
 
-    drawer = Drawer(bbox_corners=bbox, image=detector.lookup_image)
+    drawer = Drawer(bbox_corners=lookup_bbox, image=detector.lookup_image)
 
     collected_plotter_params = {
         "save": save_result,
@@ -167,3 +167,5 @@ def _process_lookup_image(
     }
 
     drawer.make_plot(**collected_plotter_params)
+
+    return reference_bbox, lookup_bbox
