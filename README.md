@@ -1,1 +1,1 @@
-![Terminal Image](./docs_assets/terminal-image.png)
+![Terminal Image](docs_assets/terminal-image.png)
