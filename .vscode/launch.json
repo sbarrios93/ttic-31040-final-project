@@ -13,11 +13,10 @@
 			"justMyCode": true,
 			"args": [
 				"./images/stopsign/reference/stop-reference.jpg",
-				"./images/stopsign/lookup"
-				// "--no-display",
-				// "--save",
-				// "--save-path",
-				// "./output"
+				"./images/stopsign/lookup",
+				"--save",
+				"--save-path",
+				"./output/stop1.jpg"
 			]
 		}
 	]
